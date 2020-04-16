@@ -54,84 +54,83 @@ async function migrate(context, ozNetworkName, ozOptions = '') {
 
   runShell(`oz session ${ozOptions} --network ${ozNetworkName} --from ${process.env.ADMIN_ADDRESS} --expires 3600 --timeout 600`)
 
-  let skip20 = false
-
-  console.log(chalk.green('Starting SAI'))
-
-  await migration.migrate(10, async () => {
-    runShell(`oz create PoolSai --init init --args ${ownerWallet.address},${cSai},${feeFraction},${ownerWallet.address},${lockDuration},${cooldownDuration}`)
-    context.reload()
-    skip20 = true
-  })
-
-  if (!skip20) {
-    await migration.migrate(20, () => {
-      throw new Error('Pool must be manually upgraded using the Multisig.')
-    })
-  }
-
-  await migration.migrate(30, async () => {
-    runShell(`oz create PoolSaiToken ${ozOptions} --network ${ozNetworkName} --init init --args '"Pool Sai","plSai",[],${context.contracts.PoolSai.address}'`)
-    context.reload()
-  })
-
-  await migration.migrate(39, async () => {
-    chai.expect(await context.contracts.PoolSai.isAdmin(ownerWallet.address)).to.be.true
-    // throw new Error('THIS FAILED...?')
-    await context.contracts.PoolSai.setPoolToken(context.contracts.PoolSaiToken.address)
-  })
-
   console.log(chalk.green('Starting DAI'))
 
-  await migration.migrate(40, async () => {
+  await migration.migrate(10, async () => {
     runShell(`oz create PoolDai ${ozOptions} --network ${ozNetworkName} --init init --args '${ownerWallet.address},${cDai},${feeFraction},${ownerWallet.address},${lockDuration},${cooldownDuration}'`)
     context.reload()
   })
 
-  await migration.migrate(50, async () => {
-    if (scdMcdMigration) {
-      await context.contracts.PoolDai.initMigration(scdMcdMigration, context.contracts.PoolSai.address)
-    }
-  })
+  // await migration.migrate(20, async () => {
+  //   if (scdMcdMigration) {
+  //     await context.contracts.PoolDai.initMigration(scdMcdMigration, context.contracts.PoolSai.address)
+  //   }
+  // })
 
-  await migration.migrate(55, async () => {
+  await migration.migrate(30, async () => {
     runShell(`oz create PoolDaiToken ${ozOptions} --network ${ozNetworkName} --init init --args '"Pool Dai","plDai",[],${context.contracts.PoolDai.address}'`)
     context.reload()
   })
 
-  await migration.migrate(56, async () => {
+  await migration.migrate(40, async () => {
     console.log(chalk.yellow(`PoolDai#setPoolToken: ${context.contracts.PoolDaiToken.address}`))
     await context.contracts.PoolDai.setPoolToken(context.contracts.PoolDaiToken.address)
     console.log(chalk.green(`PoolDai#setPoolToken`))
   })
 
-  await migration.migrate(60, async () => {
+  await migration.migrate(50, async () => {
     console.log(chalk.yellow(`PoolDai#addAdmin: ${MULTISIG_ADMIN1}`))
     await context.contracts.PoolDai.addAdmin(MULTISIG_ADMIN1)
   })
 
-  console.log(chalk.green('Starting USDC'))
+  // console.log(chalk.green('Starting SAI'))
 
-  await migration.migrate(65, async () => {
-    runShell(`oz create PoolUsdc ${ozOptions} --network ${ozNetworkName} --init init --args '${ownerWallet.address},${cUsdc},${feeFraction},${ownerWallet.address},${lockDuration},${cooldownDuration}'`)
-    context.reload()
-  })
+  // let skipMultisig = false
+  // await migration.migrate(60, async () => {
+  //   runShell(`oz create PoolSai --init init --args ${ownerWallet.address},${cSai},${feeFraction},${ownerWallet.address},${lockDuration},${cooldownDuration}`)
+  //   context.reload()
+  //   skipMultisig = true
+  // })
 
-  await migration.migrate(70, async () => {
-    runShell(`oz create PoolUsdcToken ${ozOptions} --network ${ozNetworkName} --init init --args '"Pool Usdc","plUsdc",[],${context.contracts.PoolUsdc.address},6'`)
-    context.reload()
-  })
+  // if (!skipMultisig) {
+  //   await migration.migrate(70, () => {
+  //     throw new Error('Pool must be manually upgraded using the Multisig.')
+  //   })
+  // }
 
-  await migration.migrate(75, async () => {
-    console.log(chalk.yellow(`PoolUsdc#setPoolToken: ${context.contracts.PoolUsdcToken.address}`))
-    await context.contracts.PoolUsdc.setPoolToken(context.contracts.PoolUsdcToken.address)
-    console.log(chalk.green(`PoolUsdc#setPoolToken`))
-  })
+  // await migration.migrate(80, async () => {
+  //   runShell(`oz create PoolSaiToken ${ozOptions} --network ${ozNetworkName} --init init --args '"Pool Sai","plSai",[],${context.contracts.PoolSai.address}'`)
+  //   context.reload()
+  // })
 
-  await migration.migrate(80, async () => {
-    console.log(chalk.yellow(`PoolUsdc#addAdmin: ${MULTISIG_ADMIN1}`))
-    await context.contracts.PoolUsdc.addAdmin(MULTISIG_ADMIN1)
-  })
+  // await migration.migrate(90, async () => {
+  //   chai.expect(await context.contracts.PoolSai.isAdmin(ownerWallet.address)).to.be.true
+  //   // throw new Error('THIS FAILED...?')
+  //   await context.contracts.PoolSai.setPoolToken(context.contracts.PoolSaiToken.address)
+  // })
+
+  // console.log(chalk.green('Starting USDC'))
+
+  // await migration.migrate(100, async () => {
+  //   runShell(`oz create PoolUsdc ${ozOptions} --network ${ozNetworkName} --init init --args '${ownerWallet.address},${cUsdc},${feeFraction},${ownerWallet.address},${lockDuration},${cooldownDuration}'`)
+  //   context.reload()
+  // })
+
+  // await migration.migrate(110, async () => {
+  //   runShell(`oz create PoolUsdcToken ${ozOptions} --network ${ozNetworkName} --init init --args '"Pool Usdc","plUsdc",[],${context.contracts.PoolUsdc.address},6'`)
+  //   context.reload()
+  // })
+
+  // await migration.migrate(120, async () => {
+  //   console.log(chalk.yellow(`PoolUsdc#setPoolToken: ${context.contracts.PoolUsdcToken.address}`))
+  //   await context.contracts.PoolUsdc.setPoolToken(context.contracts.PoolUsdcToken.address)
+  //   console.log(chalk.green(`PoolUsdc#setPoolToken`))
+  // })
+
+  // await migration.migrate(130, async () => {
+  //   console.log(chalk.yellow(`PoolUsdc#addAdmin: ${MULTISIG_ADMIN1}`))
+  //   await context.contracts.PoolUsdc.addAdmin(MULTISIG_ADMIN1)
+  // })
 
   console.log(chalk.green('Done!'))
 }
