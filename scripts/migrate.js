@@ -49,7 +49,7 @@ async function migrate(context, ozNetworkName, ozOptions = '') {
   const ownerWallet = await walletAtIndex(0)
 
   const feeFraction = '0'
-  const lockDuration = 40
+  const lockDuration = 1
   const cooldownDuration = ozNetworkName === 'mainnet' ? lockDuration : 1
 
   runShell(`oz session ${ozOptions} --network ${ozNetworkName} --from ${process.env.ADMIN_ADDRESS} --expires 3600 --timeout 600`)
@@ -83,6 +83,29 @@ async function migrate(context, ozNetworkName, ozOptions = '') {
     await context.contracts.PoolDai.addAdmin(MULTISIG_ADMIN1)
   })
 
+  console.log(chalk.green('Starting USDC'))
+
+  await migration.migrate(60, async () => {
+    runShell(`oz create PoolUsdc ${ozOptions} --network ${ozNetworkName} --init init --args '${ownerWallet.address},${cUsdc},${feeFraction},${ownerWallet.address},${lockDuration},${cooldownDuration}'`)
+    context.reload()
+  })
+
+  await migration.migrate(70, async () => {
+    runShell(`oz create PoolUsdcToken ${ozOptions} --network ${ozNetworkName} --init init --args '"Pool Usdc","plUsdc",[],${context.contracts.PoolUsdc.address},6'`)
+    context.reload()
+  })
+
+  await migration.migrate(80, async () => {
+    console.log(chalk.yellow(`PoolUsdc#setPoolToken: ${context.contracts.PoolUsdcToken.address}`))
+    await context.contracts.PoolUsdc.setPoolToken(context.contracts.PoolUsdcToken.address)
+    console.log(chalk.green(`PoolUsdc#setPoolToken`))
+  })
+
+  await migration.migrate(90, async () => {
+    console.log(chalk.yellow(`PoolUsdc#addAdmin: ${MULTISIG_ADMIN1}`))
+    await context.contracts.PoolUsdc.addAdmin(MULTISIG_ADMIN1)
+  })
+
   // console.log(chalk.green('Starting SAI'))
 
   // let skipMultisig = false
@@ -107,29 +130,6 @@ async function migrate(context, ozNetworkName, ozOptions = '') {
   //   chai.expect(await context.contracts.PoolSai.isAdmin(ownerWallet.address)).to.be.true
   //   // throw new Error('THIS FAILED...?')
   //   await context.contracts.PoolSai.setPoolToken(context.contracts.PoolSaiToken.address)
-  // })
-
-  // console.log(chalk.green('Starting USDC'))
-
-  // await migration.migrate(100, async () => {
-  //   runShell(`oz create PoolUsdc ${ozOptions} --network ${ozNetworkName} --init init --args '${ownerWallet.address},${cUsdc},${feeFraction},${ownerWallet.address},${lockDuration},${cooldownDuration}'`)
-  //   context.reload()
-  // })
-
-  // await migration.migrate(110, async () => {
-  //   runShell(`oz create PoolUsdcToken ${ozOptions} --network ${ozNetworkName} --init init --args '"Pool Usdc","plUsdc",[],${context.contracts.PoolUsdc.address},6'`)
-  //   context.reload()
-  // })
-
-  // await migration.migrate(120, async () => {
-  //   console.log(chalk.yellow(`PoolUsdc#setPoolToken: ${context.contracts.PoolUsdcToken.address}`))
-  //   await context.contracts.PoolUsdc.setPoolToken(context.contracts.PoolUsdcToken.address)
-  //   console.log(chalk.green(`PoolUsdc#setPoolToken`))
-  // })
-
-  // await migration.migrate(130, async () => {
-  //   console.log(chalk.yellow(`PoolUsdc#addAdmin: ${MULTISIG_ADMIN1}`))
-  //   await context.contracts.PoolUsdc.addAdmin(MULTISIG_ADMIN1)
   // })
 
   console.log(chalk.green('Done!'))
